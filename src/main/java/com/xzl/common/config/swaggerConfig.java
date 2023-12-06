@@ -1,4 +1,4 @@
-package com.xzl.common.Http.config;
+package com.xzl.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

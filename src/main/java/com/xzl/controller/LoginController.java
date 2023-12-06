@@ -9,15 +9,13 @@ package com.xzl.controller;
  * @Create : 2023/12/1 - 17:26
  * @Version: jdk 1.8
  */
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xzl.Service.DatasService;
-import com.xzl.dao.DataDAO;
 import com.xzl.entry.*;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.http.*;
@@ -38,6 +36,7 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/login")
+@Api(value = "爬取数据")
 public class LoginController {
 
     @Autowired
@@ -46,10 +45,8 @@ public class LoginController {
     @Autowired
     private DatasService datasService;
 
-    private static final String DEFAULT_PAGE_NUMBER = "1";
-    private static final String DEFAULT_PAGE_SIZE = "30";
-
     @PostMapping("/askCookie")
+    @ApiOperation(value = "获取cookie")
     public String login(@ModelAttribute LoginRequest loginForm) {
         // 定义目标登录URL
         String loginUrl = "https://emt.jinqucloud.com/login";
@@ -67,10 +64,8 @@ public class LoginController {
 
         // 构建请求体
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
-//        System.out.println(requestEntity);
         // 发送POST请求
         ResponseEntity<String> responseEntity = restTemplate.exchange(loginUrl, HttpMethod.POST, requestEntity, String.class);
-//        System.out.println("o_O = =  =  " + responseEntity);;
         // 检查响应，根据需要进行处理
         int statusCode = responseEntity.getStatusCodeValue();
         String cookie = null;
@@ -79,7 +74,6 @@ public class LoginController {
         if (setCookieHeaders != null) {
             for (String setCookieHeader : setCookieHeaders) {
                 cookie = extractJSessionId(setCookieHeader);
-//                System.out.println(" 11111111111 o_O" + cookie);
 
             }
         }
@@ -102,6 +96,7 @@ public class LoginController {
     }
 
     @PostMapping("/list")
+    @ApiOperation(value = "获取户数据")
     public DataVo list(@ModelAttribute ListRequest listForm) throws IOException {
         String listUrl = "https://emt.jinqucloud.com/system/dynamic/list?id=2743";
 
@@ -116,30 +111,21 @@ public class LoginController {
         formData.add("report_one_load", "1");
         formData.add("quickQuery=bigSearch", "");
         // 创建请求头并设置 Content-Type 为 application/x-www-form-urlencoded
-//        System.out.println(formData);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE);
         headers.add(HttpHeaders.COOKIE, listForm.getCookie());
         // 构建请求体
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
-//        System.out.println(requestEntity);
         // 发送POST请求
         ResponseEntity<String> responseEntity = restTemplate.exchange(listUrl, HttpMethod.POST, requestEntity, String.class);
-//        System.out.println("o_O = =  =  " + responseEntity);
-        // 检查响应，根据需要进行处理
-//        System.out.println(formData);
-        int statusCode = responseEntity.getStatusCodeValue();
-//        System.out.println(statusCode);
         String body = responseEntity.getBody();
-//        System.out.println(body);
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(body);
         JsonNode rowsNode = jsonNode.get("rows");
         JsonNode total = jsonNode.get("total");
         // 判断 "rows" 是否存在，以及其值是否为数组节点
         List<Datas> list = objectMapper.readValue(rowsNode.traverse(), new TypeReference<List<Datas>>() {});
-        // 现在你可以使用 list，它包含了 "rows" 的值对应的 List<Datas> 对象
-//        System.out.println(list);
+        //使用 list，它包含了 "rows" 的值对应的 List<Datas> 对象
         Integer totalNumber = objectMapper.readValue(total.traverse(), int.class);
 
         return new DataVo(list, totalNumber);
@@ -147,6 +133,7 @@ public class LoginController {
 
 
     @PostMapping("/caret")
+    @ApiOperation(value = "得到所在时间段的所有数据并存入数据库中")
     public DataVo caret(@RequestBody Model model) {
         String cookie = null;
 
@@ -174,21 +161,17 @@ public class LoginController {
                     allData.addAll(data);
 
                     if (currentPageData.getData().size() < pageSize) {
-                        // Break if the last page is reached
                         System.out.println("数据完成");
                         break;
                     }
-
                     currentPage++;
                 } catch (Exception e) {
-                    // Handle Cookie expiration by re-logging in
                     cookie = login(new LoginRequest(model.getUsername(), model.getPassword(), "1", "false"));
                 }
             }
 
             return new DataVo(allData, allData.size());
         } catch (Exception e) {
-            // Handle other exceptions or log errors
             e.printStackTrace();
         }
 
@@ -208,7 +191,6 @@ public class LoginController {
         }
         matcher.appendTail(result);
 
-        // 添加大括号，使其成为标准的 JSON 格式
         return  result.toString();
     }
 

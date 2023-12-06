@@ -1,4 +1,4 @@
-package com.xzl.common.Http.config;
+package com.xzl.common.config;
 
 /**
  * ClassName : RestTemplateConfig
